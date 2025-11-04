@@ -1,9 +1,10 @@
 # Overview
 
 This code is about a MCP Server that provides data from the National Weather Service (NWS).
+
 There's also a MCP Client that connects to this server to use their MCP Tools to enhance the response for Customer questions (queries).
 
-It was was built following the [official MCP documentation](https://modelcontextprotocol.io/docs).
+It was built following the [official MCP documentation](https://modelcontextprotocol.io/docs).
 
 
 ## Setup
