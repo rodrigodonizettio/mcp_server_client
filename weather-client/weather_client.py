@@ -145,7 +145,7 @@ class MCPClient:
 
 async def main():
     if len(sys.argv) < 2:
-        print("Usage: python client.py <path_to_server_script>")
+        print("Usage: python weather_client.py <path_to_server_script>")
         sys.exit(1)
 
     client = MCPClient()
