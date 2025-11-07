@@ -1,7 +1,7 @@
 [project]
 name = "weather-client"
 version = "0.1.0"
-description = "Add your description here"
+description = "Weather MCP Client using AWS Bedrock models"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
