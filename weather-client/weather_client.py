@@ -1,12 +1,17 @@
 import asyncio
 from typing import Optional
 from contextlib import AsyncExitStack
+import json
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from anthropic import Anthropic
+# from anthropic import Anthropic
+import boto3
+
 from dotenv import load_dotenv
+
+import os
 
 
 load_dotenv()  # load environment variables from .env
@@ -17,8 +22,55 @@ class MCPClient:
         # Initialize session and client objects
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
-        self.anthropic = Anthropic()
+        # self.anthropic = Anthropic()
+
+        self.bedrock = boto3.client(
+            service_name='bedrock-runtime',
+            region_name=os.getenv('AWS_REGION', 'us-east-1'),
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+        )
+
+        self.model_id = os.getenv('AWS_MODEL_ID')
     
+    async def invoke_bedrock_model(self, messages, tools=None):
+        """Invoke AWS Bedrock model with messages and tools"""
+        if "anthropic" in self.model_id:
+            body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 1000,
+                "messages": messages
+            }
+            if tools:
+                body["tools"] = tools
+                
+        elif "amazon.titan" in self.model_id:
+            body = {
+                "inputText": messages[-1]["content"],
+                "textGenerationConfig": {
+                    "maxTokenCount": 1000,
+                    "temperature": 0.7,
+                    "topP": 0.9,
+                    "stopSequences": []
+                }
+            }
+            
+        response = self.bedrock.invoke_model(
+            modelId=self.model_id,
+            body=json.dumps(body)
+        )
+        
+        response_body = json.loads(response['body'].read())
+        
+        # Parse response based on model
+        if "anthropic" in self.model_id:
+            return response_body
+        elif "amazon.titan" in self.model_id:
+            return {
+                "content": [
+                    {"type": "text", "text": response_body['results'][0]['outputText']}
+                ]
+            }
 
     async def connect_to_server(self, server_script_path: str):
         """Connect to an MCP server
@@ -51,7 +103,7 @@ class MCPClient:
     
 
     async def process_query(self, query: str) -> str:
-        """Process a query using Claude and available tools"""
+        """Process a query using LLM and available tools"""
         messages = [
             {
                 "role": "user",
@@ -66,6 +118,47 @@ class MCPClient:
             "input_schema": tool.inputSchema
         } for tool in response.tools]
 
+        # Initial LLM call
+        response = await self.invoke_bedrock_model(messages, available_tools)
+
+        # Process response and handle tool calls
+        final_text = []
+        assistant_message_content = []
+
+        for content in response['content']:
+            if content['type'] == 'text':
+                final_text.append(content['text'])
+                assistant_message_content.append(content)
+            elif content['type'] == 'tool_use':
+                tool_name = content['name']
+                tool_args = content['input']
+
+                # Execute tool call
+                result = await self.session.call_tool(tool_name, tool_args)
+                final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
+
+                assistant_message_content.append(content)
+                messages.append({
+                    "role": "assistant",
+                    "content": assistant_message_content
+                })
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content['id'],
+                            "content": result.content
+                        }
+                    ]
+                })
+
+                # Get next response from LLM
+                response = await self.invoke_bedrock_model(messages, available_tools)
+
+                final_text.append(response['content'][0]['text'])
+
+        '''
         # Initial Claude API call
         response = self.anthropic.messages.create(
             model="claude-3-5-sonnet-20241022",
@@ -115,7 +208,7 @@ class MCPClient:
                 )
 
                 final_text.append(response.content[0].text)
-
+        '''
         return "\n".join(final_text)
     
 
