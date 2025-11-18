@@ -1,0 +1,1 @@
+uv run weather-client/weather_client.py weather/pokemon.py
