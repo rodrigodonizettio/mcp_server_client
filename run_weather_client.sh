@@ -1,2 +1,1 @@
-cd weather-client
-uv run weather_client.py ../weather/weather.py
+uv run weather-client/weather_client.py weather/weather.py

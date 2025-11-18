@@ -1,1 +1,1 @@
-uv run weather.py
+uv run weather/weather.py
