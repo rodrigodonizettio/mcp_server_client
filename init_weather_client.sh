@@ -9,7 +9,7 @@ uv venv
 source .venv/bin/activate
 
 # Install required packages
-uv add mcp anthropic python-dotenv
+uv add mcp anthropic python-dotenv boto3
 
 # Remove boilerplate files
 rm main.py
