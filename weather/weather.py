@@ -100,7 +100,7 @@ async def get_forecast(latitude: float, longitude: float) -> str:
 
 
 def main():
-    # Initialize and run the server
+    print('Initializing MCP Server...')
     mcp.run(transport='stdio')
 
 
