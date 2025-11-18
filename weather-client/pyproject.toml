@@ -1,7 +1,7 @@
 [project]
 name = "weather-client"
 version = "0.1.0"
-description = "Weather MCP Client using AWS Bedrock models"
+description = "Weather and Pokemon MCP Clients using AWS Bedrock and Claude integration"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
